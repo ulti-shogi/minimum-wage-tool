@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <title>最低賃金との差を計算するツール</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+<main>
+  <h1>最低賃金計算ツール</h1>
+
+  <p>あなたの時給は最低賃金よりも何％高い？</p>
+
+  <div class="layout">
+    <!-- 左カラム：①地方 ②都道府県 ③時給 ④ボタン -->
+    <div class="layout-left">
+      <label>
+    ①都道府県を選択（地方別）
+    <select id="pref">
+    <option value="">選択してください</option>
+    <!-- JSで optgroup + option を自動追加 -->
+    </select>
+    </label>
+
+      <label>
+        ②時給を入力する（半角数字）
+        <input id="wage" type="number" min="1" step="1" inputmode="numeric" placeholder="例：1200">
+      </label>
+
+      <button id="calcButton" type="button">計算する</button>
+    </div>
+
+    <!-- 右カラム：結果＋注意書き -->
+    <div class="layout-right">
+      <div id="result"></div>
+      
+    </div>
+  </div>
+</main>
+<script src="script.js"></script>
+</body>
+</html>
