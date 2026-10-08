@@ -61,7 +61,7 @@ button {
   color: #555;
 }
 
-/* --- ここからPC向けレイアウト（レスポンシブ） --- */
+/* --- ここからPC向けレイアウト --- */
 @media (min-width: 768px) {
   body {
     margin: 32px auto;

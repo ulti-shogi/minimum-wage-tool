@@ -1,55 +1,4 @@
-// 都道府県ごとの最低賃金（令和7年度・時間額・円）
-const minWage = {
-  "北海道": 1075,
-  "青森県": 1029,
-  "岩手県": 1031,
-  "宮城県": 1038,
-  "秋田県": 1031,
-  "山形県": 1032,
-  "福島県": 1033,
-  "茨城県": 1074,
-  "栃木県": 1068,
-  "群馬県": 1063,
-  "埼玉県": 1141,
-  "千葉県": 1140,
-  "東京都": 1226,
-  "神奈川県": 1225,
-  "新潟県": 1050,
-  "富山県": 1062,
-  "石川県": 1054,
-  "福井県": 1053,
-  "山梨県": 1052,
-  "長野県": 1061,
-  "岐阜県": 1065,
-  "静岡県": 1097,
-  "愛知県": 1140,
-  "三重県": 1087,
-  "滋賀県": 1080,
-  "京都府": 1122,
-  "大阪府": 1177,
-  "兵庫県": 1116,
-  "奈良県": 1051,
-  "和歌山県": 1045,
-  "鳥取県": 1030,
-  "島根県": 1033,
-  "岡山県": 1047,
-  "広島県": 1085,
-  "山口県": 1043,
-  "徳島県": 1046,
-  "香川県": 1036,
-  "愛媛県": 1033,
-  "高知県": 1023,
-  "福岡県": 1057,
-  "佐賀県": 1030,
-  "長崎県": 1031,
-  "熊本県": 1034,
-  "大分県": 1035,
-  "宮崎県": 1023,
-  "鹿児島県": 1026,
-  "沖縄県": 1023
-};
-
-// optgroup用：地方 → 都道府県
+// optgroup用：地方 → 都道府県の定義は構造として残します
 const regions = {
   "北海道・東北": ["北海道", "青森県", "岩手県", "宮城県", "秋田県", "山形県", "福島県"],
   "関東": ["茨城県", "栃木県", "群馬県", "埼玉県", "千葉県", "東京都", "神奈川県"],
@@ -60,17 +9,45 @@ const regions = {
   "九州・沖縄": ["福岡県", "佐賀県", "長崎県", "熊本県", "大分県", "宮崎県", "鹿児島県", "沖縄県"]
 };
 
-window.addEventListener("DOMContentLoaded", () => {
-  const prefSelect = document.getElementById("pref");
+// 読み込んだ最低賃金データを保持する変数
+let currentMinWageData = {};
 
-  // 先頭の「選択してください」が無い場合は追加
-  const hasDefault = Array.from(prefSelect.options).some(opt => opt.value === "");
-  if (!hasDefault) {
-    const defaultOpt = document.createElement("option");
-    defaultOpt.value = "";
-    defaultOpt.textContent = "選択してください";
-    prefSelect.appendChild(defaultOpt);
+// 外部ファイル（txt/csv）を読み込んで解析する関数
+async function loadMinWageData(year) {
+  try {
+    const response = await fetch(`minwage-${year}.txt`);
+    if (!response.ok) {
+      throw new Error(`minwage-${year}.txt の読み込みに失敗しました。`);
+    }
+    const text = await response.text();
+    parseCSV(text);
+    return true;
+  } catch (error) {
+    console.error(error);
+    document.getElementById("result").innerHTML = `<p style="color:red;">データの読み込みに失敗しました。（サーバー環境で実行していますか？）</p>`;
+    return false;
   }
+}
+
+// カンマ区切りのテキストをオブジェクトに変換
+function parseCSV(text) {
+  currentMinWageData = {};
+  const lines = text.trim().split("\n");
+  
+  for (let i = 1; i < lines.length; i++) { // 1行目はヘッダーとして飛ばす
+    const line = lines[i].trim();
+    if (!line) continue;
+    
+    const [pref, wage] = line.split(",");
+    if (pref && wage) {
+      currentMinWageData[pref.trim()] = Number(wage.trim());
+    }
+  }
+}
+
+window.addEventListener("DOMContentLoaded", async () => {
+  const prefSelect = document.getElementById("pref");
+  const yearSelect = document.getElementById("year");
 
   // optgroupを追加
   Object.keys(regions).forEach(regionName => {
@@ -86,14 +63,24 @@ window.addEventListener("DOMContentLoaded", () => {
 
     prefSelect.appendChild(group);
   });
+
+  // 初回のデータ読み込み（2026年）
+  await loadMinWageData(yearSelect.value);
+
+  // 年度が変更されたらデータを再読み込み
+  yearSelect.addEventListener("change", async (e) => {
+    await loadMinWageData(e.target.value);
+    document.getElementById("result").innerHTML = ""; // 結果表示をリセット
+  });
 });
 
 document.getElementById("calcButton").addEventListener("click", () => {
   const pref = document.getElementById("pref").value;
   const myWage = Number(document.getElementById("wage").value);
+  const yearSelect = document.getElementById("year");
+  const selectedYearText = yearSelect.options[yearSelect.selectedIndex].text;
   const result = document.getElementById("result");
 
-  // 初期化
   result.style.color = "";
   result.innerHTML = "";
 
@@ -107,42 +94,30 @@ document.getElementById("calcButton").addEventListener("click", () => {
     return;
   }
 
-  const base = minWage[pref];
+  const base = currentMinWageData[pref];
   if (!base) {
-    result.textContent = "この都道府県の最低賃金データが見つかりません。";
+    result.textContent = "この都道府県・年度の最低賃金データが見つかりません。";
     return;
   }
 
-  // 事実表示（pタグで淡々と）
   const factsHtml =
     `<p>入力された時給：${myWage}円</p>` +
-    `<p>${pref}の最低賃金：${base}円</p>`;
+    `<p>${pref}の最低賃金（${selectedYearText}）：${base}円</p>`;
 
-  // 判定（下回り時は％表現を出さない）
+  let conclusion = "";
   if (myWage >= base) {
     const percentUp = ((myWage - base) / base) * 100;
-    const conclusion =
-      `<p>あなたの時給は、${pref}の最低賃金の<strong>${percentUp.toFixed(2)}％</strong>増しの金額です。</p>`;
-
-    const note =
-      `<p style="margin-top:12px;font-size:0.9em;color:#555;">` +
-      `※金額は厚生労働省「令和7年度 地域別最低賃金 全国一覧」に基づきます。<br>` +
-      `※金額が改定された場合は、このツールの数値も更新が必要です。` +
-      `</p>`;
-
-    result.innerHTML = `<p><strong>【結果】</strong></p>` + factsHtml + conclusion + note;
+    conclusion = `<p>あなたの時給は、${pref}の最低賃金の<strong>${percentUp.toFixed(2)}％</strong>増しの金額です。</p>`;
   } else {
     result.style.color = "red";
-
-    const conclusion =
-      `<p>あなたの時給は、${pref}の最低賃金を下回っています。</p>`;
-
-    const note =
-      `<p style="margin-top:12px;font-size:0.9em;color:#555;">` +
-      `※金額は厚生労働省「令和7年度 地域別最低賃金 全国一覧」に基づきます。<br>` +
-      `※将来改定された場合は、このツールの数値も更新が必要です。` +
-      `</p>`;
-
-    result.innerHTML = `<p><strong>【結果】</strong></p>` + factsHtml + conclusion + note;
+    conclusion = `<p>あなたの時給は、${pref}の最低賃金を下回っています。</p>`;
   }
+
+  const note =
+    `<p style="margin-top:12px;font-size:0.9em;color:#555;">` +
+    `※金額は${selectedYearText}のデータに基づきます。<br>` +
+    `※データが改定された場合は、対応する年度のテキストファイルを更新してください。` +
+    `</p>`;
+
+  result.innerHTML = `<p><strong>【結果】</strong></p>` + factsHtml + conclusion + note;
 });
