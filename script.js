@@ -100,9 +100,13 @@ document.getElementById("calcButton").addEventListener("click", () => {
     return;
   }
 
+  // 選択された年度のテキスト（例：「2026年（令和8年度）」）から「（令和〇年度）」の部分だけを抽出
+  const match = selectedYearText.match(/（(.*?)）/);
+  const eraName = match ? match[1] : ""; 
+
   const factsHtml =
     `<p>入力された時給：${myWage}円</p>` +
-    `<p>${pref}の最低賃金（${selectedYearText}）：${base}円</p>`;
+    `<p>${pref}の最低賃金：${base}円（${eraName}）</p>`;
 
   let conclusion = "";
   if (myWage >= base) {
